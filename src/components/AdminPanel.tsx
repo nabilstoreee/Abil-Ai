@@ -240,6 +240,54 @@ export default function AdminPanel({ token, onClose, currentUser }: AdminPanelPr
     }
   };
 
+  const handleMuteUser = async (email: string, mute: boolean) => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/users/mute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ email, mute })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatusMsg({ type: 'success', text: data.message });
+        fetchUsers();
+      } else {
+        setStatusMsg({ type: 'error', text: data.message });
+      }
+    } catch(e) {
+      setStatusMsg({ type: 'error', text: 'Gagal mute user' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (email: string) => {
+    console.log("Delete user called for:", email);
+    if (!confirm(`Yakin ingin menghapus user ${email}?`)) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      console.log("Delete response:", data);
+      if (data.success) {
+        setStatusMsg({ type: 'success', text: data.message });
+        fetchUsers();
+      } else {
+        setStatusMsg({ type: 'error', text: data.message });
+      }
+    } catch(e) {
+      console.error("Delete error:", e);
+      setStatusMsg({ type: 'error', text: 'Gagal hapus user' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGrantVip = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!grantEmail) {
@@ -683,19 +731,41 @@ export default function AdminPanel({ token, onClose, currentUser }: AdminPanelPr
                               )}
                             </td>
                             <td className="p-4 text-center">
-                              {!u.isAdmin && u.hasAccess ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleRevokeVip(u.email)}
-                                  disabled={loading}
-                                  className="mx-auto px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-400 font-bold text-xs flex items-center justify-center gap-1 transition-all duration-200 cursor-pointer select-none"
-                                >
-                                  <Trash2 size={12} className="shrink-0" />
-                                  <span>Hapus VIP</span>
-                                </button>
-                              ) : (
-                                <span className="text-xs text-zinc-600 font-medium">-</span>
-                              )}
+                              <div className="flex flex-col gap-2 items-center">
+                                {!u.isAdmin && (
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMuteUser(u.email, !u.isMuted)}
+                                      disabled={loading}
+                                      className={`px-2 py-1 rounded text-[10px] font-bold ${
+                                        u.isMuted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                                      }`}
+                                    >
+                                      {u.isMuted ? 'Unmute' : 'Mute'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteUser(u.email)}
+                                      className="px-2 py-1 rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 text-[10px] font-bold"
+                                    >
+                                      Hapus
+                                    </button>
+                                  </div>
+                                )}
+                                {u.hasAccess && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRevokeVip(u.email)}
+                                    disabled={loading}
+                                    className="px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-400 font-bold text-xs flex items-center justify-center gap-1 transition-all duration-200 cursor-pointer select-none"
+                                  >
+                                    <Trash2 size={12} className="shrink-0" />
+                                    <span>Hapus VIP</span>
+                                  </button>
+                                )}
+                                {!u.isAdmin && !u.hasAccess && !u.isMuted && <span className="text-zinc-600">-</span>}
+                              </div>
                             </td>
                           </tr>
                         ))
